@@ -1,0 +1,56 @@
+; Based on https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/using_selinux/creating-selinux-policies-for-containers_using-selinux
+
+(block connecttunnel-container
+
+    ; /usr/share/udica/templates/base_container.cil <<<
+    (type process)
+    (type socket)
+    (roletype system_r process)
+    (typeattributeset domain (process ))
+    (typeattributeset container_domain (process ))
+    (typeattributeset svirt_sandbox_domain (process ))
+    (typeattributeset mcs_constrained_type (process ))
+    (typeattributeset file_type (socket ))
+    (allow process socket (sock_file (create open getattr setattr read write rename link unlink ioctl lock append)))
+    (allow process proc_type (file (getattr open read)))
+    (allow process cpu_online_t (file (getattr open read)))
+    (allow container_runtime_t process (key (create link read search setattr view write)))
+    ; >>>
+
+    ; /usr/share/udica/templates/net_container.cil <<<
+    (allow process process (tcp_socket (ioctl read getattr lock write setattr append bind connect getopt setopt shutdown create listen accept)))
+    (allow process process (udp_socket (ioctl read getattr lock write setattr append bind connect getopt setopt shutdown create)))
+    (allow process process (sctp_socket (ioctl read getattr lock write setattr append bind connect getopt setopt shutdown create)))
+
+    (allow process proc_t (lnk_file (read)))
+
+    (allow process node_t (node (tcp_recv tcp_send recvfrom sendto)))
+    (allow process node_t (node (udp_recv recvfrom)))
+    (allow process node_t (node (udp_send sendto)))
+
+    (allow process node_t (udp_socket (node_bind)))
+    (allow process node_t (tcp_socket (node_bind)))
+
+    (allow process http_port_t (tcp_socket (name_connect)))
+    (allow process http_port_t (tcp_socket (recv_msg send_msg)))
+    ; >>>
+
+    ; customisations
+    (allow process process ( capability ( net_admin )))
+
+    (typeattributeset cil_gen_require tun_tap_device_t)
+    (typeattributeset cil_gen_require http_port_t)
+
+    (allow process tun_tap_device_t (chr_file (append getattr ioctl lock open read write)))
+
+    ;(allow process http_port_t (tcp_socket (name_connect)))
+    ;(allow process node_t (tcp_socket (node_bind)))
+    (allow process self (tcp_socket (listen)))
+    (allow process ephemeral_port_t (tcp_socket (name_connect
+        ioctl read getattr lock write setattr append bind connect getopt setopt shutdown create listen accept
+    )))
+    (allow process unreserved_port_t (tcp_socket (name_bind
+        ioctl read getattr lock write setattr append bind connect getopt setopt shutdown create listen accept
+    )))
+
+)
